@@ -240,10 +240,12 @@ export class JpShapeConverter {
   async simplifyGeojson(shpFile: string): Promise<string> {
     const outFile = 'simplify.geojson';
     let commands = '';
-    commands += ` -i ${shpFile}`;
+    commands += ` -i snap-interval=0.00001 ${shpFile}`;
     commands += ' -dissolve2 N03_007 copy-fields=N03_001,N03_002,N03_003,N03_004,N03_005';
-    commands += ' -simplify 0.4%'
-    commands += ` -o format=geojson ${outFile}`;
+    commands += ' -simplify 0.8% keep-shapes'
+    commands += ' -snap precision=0.00001 fix-geometry';
+    commands += ' -clean snap-interval=0.00001';
+    commands += ` -o precision=0.00001 format=geojson ${outFile}`;
 
     const output = await mapshaper.applyCommands(commands);
     const geojson = JSON.parse(output[`${outFile}`]);
