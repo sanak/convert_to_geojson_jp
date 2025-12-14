@@ -37,7 +37,7 @@ Every feature of geojson/topojson data has the following properties.
 |office|Corresponding branch name when corresponding Prefecture is Hokkaido|
 |county|Name of county of government ordinance for corresponding administrative area|
 |city|Name of city of government ordinance for corresponding administrative area|
-|name|Name of municipality for corresponding administrative area|
+|ward|Name of ward for corresponding administrative area|
 |code5|Code for identifying administrative zone composed of prefectural code and municipal code|
 |code6| code5 with check digit|
 
