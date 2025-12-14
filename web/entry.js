@@ -34,25 +34,25 @@ homeCtl.addTo(map);
 function style(feature) {
   const option = {};
   const prop = feature.properties;
-  if (/.+(都|道|府|県)$/.test(prop.name)) {
+  if (!prop.city && /.+(都|道|府|県)$/.test(prop.pref)) {
     option.className = 'map-area pref';
-  } else if (/.+市$/.test(prop.name)) {
-    option.className = 'map-area city';
-  } else if (/.+町$/.test(prop.name)) {
-    option.className = 'map-area town';
-  } else if (/.+村$/.test(prop.name)) {
-    option.className = ' map-area villege';
-  } else {
+  } else if (/.+区$/.test(prop.city) || (prop.ward && /.+区$/.test(prop.ward))) {
     option.className = 'map-area ward';
+  } else if (/.+市$/.test(prop.city)) {
+    option.className = 'map-area city';
+  } else if (/.+町$/.test(prop.city)) {
+    option.className = 'map-area town';
+  } else if (/.+村$/.test(prop.city)) {
+    option.className = ' map-area villege';
   }
   return option;
 }
 function onEachFeature(feature, layer) {
   const prop = feature.properties;
-  if (prop && prop.name) {
+  if (prop && prop.pref) {
     let name = `[${prop.code6}] ${prop.pref}`;
     if (prop.city) name = `${name} ${prop.city}`;
-    if (!/.+(都|道|府|県)$/.test(prop.name)) name = `${name} ${prop.name}`;
+    if (prop.ward) name = `${name} ${prop.ward}`;
     layer.bindTooltip(name);
     layer.on('click', (e) => {
       map.fitBounds(e.target.getBounds());

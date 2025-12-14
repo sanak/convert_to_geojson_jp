@@ -9,10 +9,11 @@ export async function convertToGeojson(srcArchive: string) {
   const shpFiles = await utils.unzip(srcArchive, /N03-\d{8}.shp/);
   const shpFile = shpFiles[0];
   const JG = new JpShapeConverter(shpFile, './dest');
+  const simplifyGeojson = await JG.simplifyGeojson(shpFile);
   await Promise.all([
-    JG.japanDetailGeojson(shpFile),
-    JG.japanGeojson(shpFile),
-    JG.japanAllPrefsGeojson(shpFile),
+    JG.japanDetailGeojson(simplifyGeojson),
+    JG.japanGeojson(simplifyGeojson),
+    JG.japanAllPrefsGeojson(simplifyGeojson),
   ]);
   await JpShapeConverter.japanPrefsGeojson('./dest/geojson/00_japan.geojson', 'geojson');
 }

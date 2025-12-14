@@ -20,18 +20,19 @@ afterAll(async () => {
   await rm(path.dirname(fixturePath), { recursive: true, force: true });
 });
 
-let shpFile: string;
 let JG: JpShapeConverter;
+let simplifyGeojson: string;
 const destBaseDir = './test/tmp';
 beforeEach(async () => {
   const shpFiles = await utils.unzip(fixturePath, /N03-\d{8}_\d{2}.shp/);
-  shpFile = shpFiles[0];
+  const shpFile = shpFiles[0];
   JG = new JpShapeConverter(shpFile, destBaseDir);
+  simplifyGeojson = await JG.simplifyGeojson(shpFile);
 });
 
 describe('japanGeojson', () => {
   test('Snapshot Test', async () => {
-    const filePath = await JG.japanGeojson(shpFile);
+    const filePath = await JG.japanGeojson(simplifyGeojson);
 
     const geojson = await loadJson(filePath);
     expect(geojson).toMatchSnapshot();
@@ -40,7 +41,7 @@ describe('japanGeojson', () => {
 
 describe('japanDetailGeojson', () => {
   test('Snapshot Test', async () => {
-    const filePath = await JG.japanDetailGeojson(shpFile);
+    const filePath = await JG.japanDetailGeojson(simplifyGeojson);
 
     const geojson = await loadJson(filePath);
     expect(geojson).toMatchSnapshot();
@@ -49,7 +50,7 @@ describe('japanDetailGeojson', () => {
 
 describe('japanAllPrefsGeojson', () => {
   test('Snapshot Test', async () => {
-    const filePath = await JG.japanAllPrefsGeojson(shpFile);
+    const filePath = await JG.japanAllPrefsGeojson(simplifyGeojson);
 
     const geojson = await loadJson(filePath);
     expect(geojson).toMatchSnapshot();
@@ -58,7 +59,7 @@ describe('japanAllPrefsGeojson', () => {
 
 describe('japanPrefsGeojson', () => {
   beforeAll(async () => {
-    await JG.japanGeojson(shpFile);
+    await JG.japanGeojson(simplifyGeojson);
   });
 
   test('Snapshot Test', async () => {
@@ -72,7 +73,7 @@ describe('japanPrefsGeojson', () => {
 
 describe('geo2topo', () => {
   beforeAll(async () => {
-    await JG.japanGeojson(shpFile);
+    await JG.japanGeojson(simplifyGeojson);
   });
 
   const outputTopoJson = path.join('/tmp', '/tmp.topojson');

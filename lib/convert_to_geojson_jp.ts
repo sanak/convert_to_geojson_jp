@@ -129,7 +129,6 @@ export class JpShapeConverter {
     commands += ` -i ${inputFile}`;
     commands += ' -dissolve2 N03_004 copy-fields=N03_001,N03_002,N03_003,N03_005,N03_007';
     commands += " -each 'N03_007=(\"0\"+(Math.floor(N03_007/10)*10)).slice(-5)'";
-    commands += ' -simplify 0.4%';
     commands += ` -o format=geojson ${outputFilePath} force`;
     await mapshaper.runCommands(commands);
     return outputFilePath;
@@ -168,15 +167,8 @@ export class JpShapeConverter {
       const props = feature.properties;
       /* eslint-disable no-param-reassign */
       props.code6 = Utils.code5to6(props.code5);
-      if (/.+市$/.test(props.name) && (props.ward && /.+区$/.test(props.ward))) { // 政令市の処理
-        props.city = props.name;
-        props.name = props.ward;
-        delete props.ward;
-      } else if (/.+区$/.test(props.name) && !props.ward) { // 特別区の処理
-        delete props.ward;
-      }
       // 不要空属性の削除
-      if (props.office.length === 0) { delete props.office; }
+      if (props.office === '') { delete props.office; }
       if (props.county === '') { delete props.county; }
       if (props.ward === '') { delete props.ward; }
       /* eslint-enable no-param-reassign */
@@ -195,9 +187,7 @@ export class JpShapeConverter {
   private async exceptBigCity(inputFile: string, outputFilePath: string): Promise<string> {
     let commands = '';
     commands += ` -i ${inputFile}`;
-    commands += ' -dissolve N03_007 copy-fields=N03_001,N03_002,N03_003,N03_004,N03_005';
     commands += " -filter '!((/.+市$/.test(N03_004) && /.+区$/.test(N03_005)) || /^所属未定地$/.test(N03_004))'";
-    commands += ' -simplify 0.4%';
     commands += ` -o format=geojson ${outputFilePath}`;
     await mapshaper.runCommands(commands);
     return outputFilePath;
@@ -213,7 +203,6 @@ export class JpShapeConverter {
     const tmpfile = 'bigcities_tmp.geojson';
     let commands = '';
     commands += ` -i ${inputFile}`;
-    commands += ' -dissolve N03_007 copy-fields=N03_001,N03_002,N03_003,N03_004,N03_005';
     commands += " -filter '/.+市$/.test(N03_004) && /.+区$/.test(N03_005)'";
     commands += ` -o format=geojson ${tmpfile} force`;
 
@@ -235,8 +224,8 @@ export class JpShapeConverter {
     commands += ` -i ${iFiles} combine-files`;
     commands += ' -merge-layers';
     commands += ' -rename-layers japan';
-    commands += ' -rename-fields pref=N03_001,office=N03_002,county=N03_003,name=N03_004,code5=N03_007';
-    commands += ' -filter-fields pref,office,county,name,code5';
+    commands += ' -rename-fields pref=N03_001,office=N03_002,county=N03_003,city=N03_004,code5=N03_007';
+    commands += ' -filter-fields pref,office,county,city,code5';
     commands += ' -o format=geojson tmp.geojson';
     const output = await mapshaper.applyCommands(commands);
     const geojson = JSON.parse(output['tmp.geojson']);
@@ -244,14 +233,33 @@ export class JpShapeConverter {
   }
 
   /**
+   * 日本全体のgeojsonを出力する。政令市は行政区に分けて出力する
+   * @param shpFile 変換の元になるshapeファイル
+   * @return Promise object
+   */
+  async simplifyGeojson(shpFile: string): Promise<string> {
+    const outFile = 'simplify.geojson';
+    let commands = '';
+    commands += ` -i ${shpFile}`;
+    commands += ' -dissolve2 N03_007 copy-fields=N03_001,N03_002,N03_003,N03_004,N03_005';
+    commands += ' -simplify 0.4%'
+    commands += ` -o format=geojson ${outFile}`;
+
+    const output = await mapshaper.applyCommands(commands);
+    const geojson = JSON.parse(output[`${outFile}`]);
+    const destDir = path.join(this.destBaseDir, 'geojson');
+    return this.outputFile(destDir, outFile, geojson);
+  }
+
+  /**
    * 国交省のshapeデータから日本の地方自治体のgeojsonデータを生成する。
    * 政令指定都は市としてひとつのシェイプにまとめる。
-   * @param shpFile ソースとなるshapeファイルのパス
+   * @param inputGeojson ソースとなるgeojsonファイルのパス
    */
-  async japanGeojson(shpFile: string): Promise<string> {
+  async japanGeojson(inputGeojson: string): Promise<string> {
     const tmpfiles = ['towns.geojson', 'bigcity.geojson'];
-    const p1 = this.exceptBigCity(shpFile, tmpfiles[0]);
-    const p2 = this.extractBigCity(shpFile, tmpfiles[1]);
+    const p1 = this.exceptBigCity(inputGeojson, tmpfiles[0]);
+    const p2 = this.extractBigCity(inputGeojson, tmpfiles[1]);
 
     try {
       await Promise.all([p1, p2]);
@@ -266,16 +274,14 @@ export class JpShapeConverter {
 
   /**
    * 日本全体のgeojsonを出力する。政令市は行政区に分けて出力する
-   * @param shpFile 変換の元になるshapeファイル
+   * @param inputGeojson 変換の元になるgeojsonファイル
    * @return Promise object
    */
-  async japanDetailGeojson(shpFile: string): Promise<string> {
+  async japanDetailGeojson(inputGeojson: string): Promise<string> {
     let commands = '';
-    commands += ` -i ${shpFile}`;
-    commands += ' -dissolve N03_007 copy-fields=N03_001,N03_002,N03_003,N03_004,N03_005';
+    commands += ` -i ${inputGeojson}`;
     commands += " -filter '!/^所属未定地$/.test(N03_004)'";
-    commands += ' -rename-fields pref=N03_001,office=N03_002,county=N03_003,name=N03_004,ward=N03_005,code5=N03_007';
-    commands += ' -simplify 0.4%';
+    commands += ' -rename-fields pref=N03_001,office=N03_002,county=N03_003,city=N03_004,ward=N03_005,code5=N03_007';
     commands += ' -rename-layers japan';
     commands += ' -o format=geojson tmp.geojson';
 
@@ -286,15 +292,14 @@ export class JpShapeConverter {
 
   /**
    * 47都道府県の全国地図のgeojsonファイルを出力する
-   * @param shpFile 変換の元になるshapeファイル
+   * @param inputGeojson 変換の元になるgeojsonファイル
    */
-  async japanAllPrefsGeojson(shpFile: string): Promise<string> {
+  async japanAllPrefsGeojson(inputGeojson: string): Promise<string> {
     const outFile = '00_japan_prefs.geojson';
     let commands = '';
-    commands += ` -i ${shpFile}`;
+    commands += ` -i ${inputGeojson}`;
     commands += ' -dissolve2 N03_001 copy-fields=N03_001,N03_007';
     commands += ' -rename-fields pref=N03_001,code5=N03_007';
-    commands += ' -simplify 0.4%';
     commands += ' -rename-layers japan_prefs';
     commands += ' -o format=geojson tmp.geojson';
 
@@ -307,7 +312,6 @@ export class JpShapeConverter {
       /* eslint-disable no-param-reassign */
       d.code5 = `${d.code5.slice(0, 2)}000`;
       d.code6 = Utils.code5to6(d.code5);
-      d.name = d.pref;
       /* eslint-enable no-param-reassign */
     });
     const destDir = path.join(this.destBaseDir, 'geojson');
