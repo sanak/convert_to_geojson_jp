@@ -242,7 +242,7 @@ export class JpShapeConverter {
     let commands = '';
     commands += ` -i snap-interval=0.00001 ${shpFile}`;
     commands += ' -dissolve2 N03_007 copy-fields=N03_001,N03_002,N03_003,N03_004,N03_005';
-    commands += ' -simplify 0.8% keep-shapes'
+    commands += ' -simplify 0.8% keep-shapes';
     commands += ' -snap precision=0.00001 fix-geometry';
     commands += ' -clean snap-interval=0.00001';
     commands += ` -o precision=0.00001 format=geojson ${outFile}`;
